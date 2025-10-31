@@ -35,6 +35,7 @@ function App() {
     const saved = localStorage.getItem("hotkeys");
     return saved ? JSON.parse(saved) : { entry: ENTRY_KEY, exit: EXIT_KEY, pause: " " };
   });
+  const [recordingKey, setRecordingKey] = useState<'entry' | 'exit' | 'pause' | null>(null);
 
   const animationFrameRef = useRef<number>();
   const lastUpdateRef = useRef<number>(0);
@@ -83,6 +84,15 @@ function App() {
   // Keyboard event handler
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
+      // Handle hotkey recording mode
+      if (recordingKey !== null) {
+        event.preventDefault();
+        const key = event.key === " " ? " " : event.key;
+        setHotkeys((prev) => ({ ...prev, [recordingKey]: key }));
+        setRecordingKey(null);
+        return;
+      }
+
       // Handle pause key
       if (event.key === hotkeys.pause) {
         event.preventDefault();
@@ -124,7 +134,7 @@ function App() {
         setLastRt(rt);
       }
     },
-    [priceModel, signalModel, hotkeys, isPaused, togglePause]
+    [priceModel, signalModel, hotkeys, isPaused, togglePause, recordingKey]
   );
 
   // Setup keyboard listener
@@ -223,37 +233,35 @@ function App() {
       {showHotkeyConfig && (
         <div className="hotkey-config">
           <div className="config-header">Configure Hotkeys</div>
+          <div className="config-instruction">Click a button and press a key</div>
           <div className="config-row">
             <label>Entry Signal:</label>
-            <input
-              type="text"
-              value={hotkeys.entry}
-              onChange={(e) => setHotkeys({ ...hotkeys, entry: e.target.value })}
-              maxLength={3}
-            />
+            <button
+              className={`hotkey-record-btn ${recordingKey === 'entry' ? 'recording' : ''}`}
+              onClick={() => setRecordingKey('entry')}
+            >
+              {recordingKey === 'entry' ? 'Press any key...' : hotkeys.entry === ' ' ? 'Space' : hotkeys.entry}
+            </button>
           </div>
           <div className="config-row">
             <label>Exit Signal:</label>
-            <input
-              type="text"
-              value={hotkeys.exit}
-              onChange={(e) => setHotkeys({ ...hotkeys, exit: e.target.value })}
-              maxLength={3}
-            />
+            <button
+              className={`hotkey-record-btn ${recordingKey === 'exit' ? 'recording' : ''}`}
+              onClick={() => setRecordingKey('exit')}
+            >
+              {recordingKey === 'exit' ? 'Press any key...' : hotkeys.exit === ' ' ? 'Space' : hotkeys.exit}
+            </button>
           </div>
           <div className="config-row">
             <label>Pause/Resume:</label>
-            <input
-              type="text"
-              value={hotkeys.pause === " " ? "Space" : hotkeys.pause}
-              onChange={(e) => {
-                const val = e.target.value;
-                setHotkeys({ ...hotkeys, pause: val === "Space" ? " " : val });
-              }}
-              maxLength={5}
-            />
+            <button
+              className={`hotkey-record-btn ${recordingKey === 'pause' ? 'recording' : ''}`}
+              onClick={() => setRecordingKey('pause')}
+            >
+              {recordingKey === 'pause' ? 'Press any key...' : hotkeys.pause === ' ' ? 'Space' : hotkeys.pause}
+            </button>
           </div>
-          <button className="config-close" onClick={() => setShowHotkeyConfig(false)}>
+          <button className="config-close" onClick={() => { setShowHotkeyConfig(false); setRecordingKey(null); }}>
             Close
           </button>
         </div>
