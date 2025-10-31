@@ -32,7 +32,7 @@ First, convert the pickle model to JSON format:
 python convert_model.py
 ```
 
-This creates `public/models/model.json` from the pickle file.
+This automatically finds the most recent model file in `models/` (based on the date in the filename) and converts it to `public/models/model.json`.
 
 ### 2. Install Dependencies
 

@@ -5,13 +5,17 @@ Convert the pickle model to JSON format for use in the React app.
 Usage:
     python convert_model.py
 
-This will create public/models/model.json from models/model-20251029-100049.pkl
+This will automatically find the most recent model file in the models/ directory
+based on the date in the filename (model-YYYYMMDD-HHMMSS.pkl) and convert it
+to public/models/model.json
 """
 
 import pickle
 import json
 import sys
+import re
 from pathlib import Path
+from datetime import datetime
 
 
 # Add paths to allow importing the model classes
@@ -43,15 +47,60 @@ class CustomUnpickler(pickle.Unpickler):
             return type(name, (), {})
 
 
+def find_latest_model() -> Path | None:
+    """Find the most recent model file based on the date in the filename.
+
+    Expected filename format: model-YYYYMMDD-HHMMSS.pkl
+
+    Returns:
+        Path to the most recent model file, or None if no models found.
+    """
+    models_dir = Path("models")
+    if not models_dir.exists():
+        return None
+
+    # Pattern to match model files: model-YYYYMMDD-HHMMSS.pkl
+    pattern = re.compile(r"model-(\d{8})-(\d{6})\.pkl")
+
+    model_files = []
+    for file_path in models_dir.glob("*.pkl"):
+        match = pattern.match(file_path.name)
+        if match:
+            date_str = match.group(1)  # YYYYMMDD
+            time_str = match.group(2)  # HHMMSS
+
+            try:
+                # Parse the datetime
+                dt = datetime.strptime(f"{date_str}{time_str}", "%Y%m%d%H%M%S")
+                model_files.append((dt, file_path))
+            except ValueError:
+                # Skip files with invalid date format
+                continue
+
+    if not model_files:
+        return None
+
+    # Sort by datetime (most recent first) and return the path
+    model_files.sort(reverse=True, key=lambda x: x[0])
+    return model_files[0][1]
+
+
 def convert_model_to_json():
     """Convert pickle model to JSON format."""
-    model_path = Path("models/model-20251029-100049.pkl")
+    # Find the latest model file
+    model_path = find_latest_model()
     output_path = Path("public/models/model.json")
+
+    if model_path is None:
+        print("Error: No model files found in models/ directory")
+        print("Expected filename format: model-YYYYMMDD-HHMMSS.pkl")
+        return
 
     if not model_path.exists():
         print(f"Error: Model file not found at {model_path}")
         return
 
+    print(f"Found latest model: {model_path.name}")
     print(f"Loading model from {model_path}...")
     with open(model_path, "rb") as f:
         model = CustomUnpickler(f).load()
