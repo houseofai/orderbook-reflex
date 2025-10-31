@@ -31,8 +31,9 @@ function App() {
   useEffect(() => {
     const loadModel = async () => {
       try {
-        // Try to load the model JSON
-        const response = await fetch("/models/model.json");
+        // Try to load the model JSON using relative path
+        // This works with base: './' in vite.config.ts for GitHub Pages
+        const response = await fetch("./models/model.json");
         if (response.ok) {
           const modelData = await response.json();
           const quoteModel = new QuoteModel(modelData);
