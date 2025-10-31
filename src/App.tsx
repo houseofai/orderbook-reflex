@@ -32,7 +32,7 @@ function App() {
     const loadModel = async () => {
       try {
         // Try to load the model JSON
-        const response = await fetch("/models/model.json");
+        const response = await fetch("public/models/model.json");
         if (response.ok) {
           const modelData = await response.json();
           const quoteModel = new QuoteModel(modelData);
