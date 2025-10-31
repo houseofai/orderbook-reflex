@@ -31,6 +31,10 @@ export class SignalModel {
   }
 
   recordReaction(key: string, now: number): boolean {
+    return this.recordReactionWithKey(key, now, ENTRY_KEY, EXIT_KEY);
+  }
+
+  recordReactionWithKey(key: string, now: number, entryKey: string, exitKey: string): boolean {
     if (this.currentSignal === null || this.signalTimestamp === null) {
       return false;
     }
@@ -39,8 +43,8 @@ export class SignalModel {
     let ok = false;
 
     if (
-      ((this.currentSignal === "ENTRY" && key === ENTRY_KEY) ||
-        (this.currentSignal === "EXIT" && key === EXIT_KEY)) &&
+      ((this.currentSignal === "ENTRY" && key === entryKey) ||
+        (this.currentSignal === "EXIT" && key === exitKey)) &&
       rt <= this.reactionWindow
     ) {
       ok = true;

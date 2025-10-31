@@ -17,12 +17,24 @@ interface HistoryEntry {
   ok: boolean;
 }
 
+interface HotkeyConfig {
+  entry: string;
+  exit: string;
+  pause: string;
+}
+
 function App() {
   const [priceModel, setPriceModel] = useState<PriceModel | null>(null);
   const [signalModel] = useState<SignalModel>(() => new SignalModel());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [lastRt, setLastRt] = useState<number | null>(null);
   const [, setUpdateTrigger] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showHotkeyConfig, setShowHotkeyConfig] = useState(false);
+  const [hotkeys, setHotkeys] = useState<HotkeyConfig>(() => {
+    const saved = localStorage.getItem("hotkeys");
+    return saved ? JSON.parse(saved) : { entry: ENTRY_KEY, exit: EXIT_KEY, pause: " " };
+  });
 
   const animationFrameRef = useRef<number>();
   const lastUpdateRef = useRef<number>(0);
@@ -58,10 +70,27 @@ function App() {
     loadModel();
   }, []);
 
+  // Save hotkeys to localStorage
+  useEffect(() => {
+    localStorage.setItem("hotkeys", JSON.stringify(hotkeys));
+  }, [hotkeys]);
+
+  // Toggle pause
+  const togglePause = useCallback(() => {
+    setIsPaused((prev) => !prev);
+  }, []);
+
   // Keyboard event handler
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (!priceModel) return;
+      // Handle pause key
+      if (event.key === hotkeys.pause) {
+        event.preventDefault();
+        togglePause();
+        return;
+      }
+
+      if (!priceModel || isPaused) return;
 
       const now = performance.now() / 1000;
       const dirActive = signalModel.currentSignal;
@@ -79,7 +108,7 @@ function App() {
         }
       }
 
-      const ok = signalModel.recordReaction(event.key, now);
+      const ok = signalModel.recordReactionWithKey(event.key, now, hotkeys.entry, hotkeys.exit);
 
       if (dirActive && signalModel.signalTimestamp !== null) {
         const rt = now - signalModel.signalTimestamp;
@@ -95,7 +124,7 @@ function App() {
         setLastRt(rt);
       }
     },
-    [priceModel, signalModel]
+    [priceModel, signalModel, hotkeys, isPaused, togglePause]
   );
 
   // Setup keyboard listener
@@ -111,7 +140,7 @@ function App() {
     const updateInterval = 1000 / REFRESH_RATE;
 
     const gameLoop = (timestamp: number) => {
-      if (timestamp - lastUpdateRef.current >= updateInterval) {
+      if (!isPaused && timestamp - lastUpdateRef.current >= updateInterval) {
         const now = performance.now() / 1000;
 
         // Update price model
@@ -138,7 +167,7 @@ function App() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [priceModel, signalModel]);
+  }, [priceModel, signalModel, isPaused]);
 
   if (!priceModel) {
     return (
@@ -148,9 +177,87 @@ function App() {
     );
   }
 
+  // Calculate comprehensive stats
+  const calculateStats = () => {
+    if (history.length === 0) {
+      return {
+        avgReactionTime: 0,
+        successRate: 0,
+        avgPriceDiff: 0,
+        totalTrades: 0,
+        successfulTrades: 0,
+      };
+    }
+
+    const totalTrades = history.length;
+    const successfulTrades = history.filter((h) => h.ok).length;
+    const successRate = (successfulTrades / totalTrades) * 100;
+    const avgReactionTime = history.reduce((sum, h) => sum + h.rt, 0) / totalTrades;
+    const avgPriceDiff = history.reduce((sum, h) => sum + Math.abs(h.userPrice - h.sigPrice), 0) / totalTrades;
+
+    return {
+      avgReactionTime,
+      successRate,
+      avgPriceDiff,
+      totalTrades,
+      successfulTrades,
+    };
+  };
+
+  const stats = calculateStats();
+
   return (
     <div className="app">
-      <h1 className="title">OrderBook Reflex Trainer</h1>
+      <div className="header">
+        <h1 className="title">OrderBook Reflex Trainer</h1>
+        <div className="controls">
+          <button className="control-btn" onClick={togglePause}>
+            {isPaused ? "▶ Resume" : "⏸ Pause"}
+          </button>
+          <button className="control-btn" onClick={() => setShowHotkeyConfig(!showHotkeyConfig)}>
+            ⚙ Hotkeys
+          </button>
+        </div>
+      </div>
+
+      {showHotkeyConfig && (
+        <div className="hotkey-config">
+          <div className="config-header">Configure Hotkeys</div>
+          <div className="config-row">
+            <label>Entry Signal:</label>
+            <input
+              type="text"
+              value={hotkeys.entry}
+              onChange={(e) => setHotkeys({ ...hotkeys, entry: e.target.value })}
+              maxLength={3}
+            />
+          </div>
+          <div className="config-row">
+            <label>Exit Signal:</label>
+            <input
+              type="text"
+              value={hotkeys.exit}
+              onChange={(e) => setHotkeys({ ...hotkeys, exit: e.target.value })}
+              maxLength={3}
+            />
+          </div>
+          <div className="config-row">
+            <label>Pause/Resume:</label>
+            <input
+              type="text"
+              value={hotkeys.pause === " " ? "Space" : hotkeys.pause}
+              onChange={(e) => {
+                const val = e.target.value;
+                setHotkeys({ ...hotkeys, pause: val === "Space" ? " " : val });
+              }}
+              maxLength={5}
+            />
+          </div>
+          <button className="config-close" onClick={() => setShowHotkeyConfig(false)}>
+            Close
+          </button>
+        </div>
+      )}
 
       <div className="main-content">
         <StatsPanel
@@ -158,6 +265,7 @@ function App() {
           lastRt={lastRt}
           history={history}
           maxHistoryRows={10}
+          stats={stats}
         />
 
         <OrderBookColumn
@@ -173,8 +281,14 @@ function App() {
         />
       </div>
 
-      <div className="help-text">
-        Press {ENTRY_KEY} on PL (Entry) / {EXIT_KEY} on PH (Exit)
+      <div className="footer">
+        <div className="help-text">
+          {isPaused ? (
+            <span className="paused-text">PAUSED - Press {hotkeys.pause === " " ? "Space" : hotkeys.pause} to resume</span>
+          ) : (
+            <>Press {hotkeys.entry} on PL (Entry) / {hotkeys.exit} on PH (Exit) | {hotkeys.pause === " " ? "Space" : hotkeys.pause} to pause</>
+          )}
+        </div>
       </div>
     </div>
   );
