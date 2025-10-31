@@ -1,0 +1,103 @@
+/* App.css - Styling for OrderBook Reflex Trainer */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: rgb(30, 30, 30);
+  color: rgb(255, 255, 255);
+  overflow: hidden;
+}
+
+.app {
+  width: 640px;
+  height: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(30, 30, 30);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  color: rgb(255, 255, 255);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: rgb(255, 255, 255);
+}
+
+.main-content {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  flex: 1;
+}
+
+.stats-panel {
+  width: 200px;
+  background-color: rgb(45, 45, 45);
+  padding: 10px 5px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: rgb(255, 255, 255);
+}
+
+.stat-item {
+  margin-bottom: 10px;
+}
+
+.history-section {
+  margin-top: 20px;
+}
+
+.history-header {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-family: monospace;
+}
+
+.history-row {
+  font-size: 11px;
+  font-weight: bold;
+  font-family: monospace;
+  white-space: pre;
+}
+
+.orderbook-column {
+  width: 200px;
+  background-color: rgb(193, 193, 193);
+  box-sizing: border-box;
+}
+
+.column-header {
+  font-size: 11px;
+  font-weight: bold;
+  text-align: left;
+}
+
+.orderbook-row {
+  font-family: Arial, sans-serif;
+}
+
+.help-text {
+  text-align: center;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: rgb(255, 255, 255);
+  margin-top: auto;
+}
